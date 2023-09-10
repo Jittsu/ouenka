@@ -3,6 +3,7 @@
 import json
 import os
 import io
+import re
 
 # external modules
 import boto3
@@ -14,7 +15,7 @@ from linebot.models import TextSendMessage
 LINE_CHANNEL_ACCESS_TOKEN = os.environ['LINE_CHANNEL_ACCESS_TOKEN']
 LINE_BOT_API = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 BUCKET_NAME = os.environ['BUCKET_NAME']
-FILE_NAME = 'softbank_hawks.csv'
+FILE_NAMES = {'ホークス': 'softbank_hawks.csv', 'タイガース': 'hanshin_tigers.csv'}
 s3 = boto3.client('s3')
 
 class levenshtein:
@@ -26,6 +27,7 @@ class levenshtein:
         self.leven_table = [[0 for i in range(len(str1) + 1)] for n in range(len(str2) + 1)]
         for i in range(len(str1) + 1):
             self.leven_table[0][i] = i
+
         for n in range(len(str2)):
             self.leven_table[n+1][0] = n + 1
 
@@ -33,6 +35,7 @@ class levenshtein:
             for i in range(len(str1)):
                 if(str2[n] == str1[i]):
                     self.leven_table[n + 1][i + 1] = self.leven_table[n][i]
+
                 else:
                     self.leven_table[n + 1][i + 1] = min(self.leven_table[n][i], self.leven_table[n + 1][i], self.leven_table[n][i + 1])
                     self.leven_table[n + 1][i + 1] += 1
@@ -46,11 +49,36 @@ def lambda_handler(event, context):
         if event['events'][0]['type'] == 'message':
             if event['events'][0]['message']['type'] == 'text':
                 input_msg = event['events'][0]['message']['text']
+                print(input_msg)
                 replyToken = event['events'][0]['replyToken']
-                obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAME)
-                content = obj['Body'].read().decode('utf-8')
-                senshu_df = pd.read_csv(io.StringIO(content))
-                print(senshu_df)
+                if ('阪神' in input_msg) or ('タイガース' in input_msg):
+                    input_msg = re.sub('阪神', '', input_msg)
+                    input_msg = re.sub('タイガース', '', input_msg)
+                    obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAMES['タイガース'])
+                    content = obj['Body'].read().decode('utf-8')
+                    senshu_df = pd.read_csv(io.StringIO(content))
+
+                elif ('ソフトバンク' in input_msg) or ('ホークス' in input_msg):
+                    input_msg = re.sub('ソフトバンク', '', input_msg)
+                    input_msg = re.sub('ホークス', '', input_msg)
+                    obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAMES['ホークス'])
+                    content = obj['Body'].read().decode('utf-8')
+                    senshu_df = pd.read_csv(io.StringIO(content))
+
+                else:
+                    for i, (k, v) in enumerate(FILE_NAMES.items()):
+                        obj = s3.get_object(Bucket=BUCKET_NAME, Key=v)
+                        content = obj['Body'].read().decode('utf-8')
+                        if i == 0:
+                            senshu_df = pd.read_csv(io.StringIO(content))
+
+                        else:
+                            tmp = pd.read_csv(io.StringIO(content))
+                            senshu_df = pd.concat([senshu_df, tmp])
+                            del tmp
+
+                input_msg = re.sub(' ', '', input_msg)
+                input_msg = re.sub('　', '', input_msg)
                 senshuname_list = list(senshu_df['名前'].str.replace('\u3000', ''))
                 ouenka_list = list(senshu_df['応援歌'])
                 ls_point = list(map(lambda x: ls.culc(input_msg, x) if set(input_msg) & set(x) else 100, senshuname_list))
