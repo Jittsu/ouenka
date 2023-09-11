@@ -95,7 +95,6 @@ def lambda_handler(event, context):
                 senshuname_list = list(senshu_df['名前'].str.replace('\u3000', ''))
                 ouenka_list = list(senshu_df['応援歌'])
                 ls_point = list(map(lambda x: (ls.culc(input_msg, x) if not input_msg in x else 0) if set(input_msg) & set(x) else 100, senshuname_list))
-                print(ls_point)
                 if not min(ls_point) == 100:
                     min_index = [i for i, v in enumerate(ls_point) if v == min(ls_point)]
                     msg = ''
