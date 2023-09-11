@@ -49,7 +49,7 @@ def lambda_handler(event, context):
         if event['events'][0]['type'] == 'message':
             if event['events'][0]['message']['type'] == 'text':
                 input_msg = event['events'][0]['message']['text']
-                print(input_msg)
+                print(f'input word: {input_msg}')
                 replyToken = event['events'][0]['replyToken']
                 if ('阪神' in input_msg) or ('タイガース' in input_msg):
                     input_msg = re.sub('阪神', '', input_msg)
@@ -57,36 +57,48 @@ def lambda_handler(event, context):
                     obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAMES['タイガース'])
                     content = obj['Body'].read().decode('utf-8')
                     senshu_df = pd.read_csv(io.StringIO(content))
-
+                    
                 elif ('ソフトバンク' in input_msg) or ('ホークス' in input_msg):
                     input_msg = re.sub('ソフトバンク', '', input_msg)
                     input_msg = re.sub('ホークス', '', input_msg)
                     obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAMES['ホークス'])
                     content = obj['Body'].read().decode('utf-8')
                     senshu_df = pd.read_csv(io.StringIO(content))
-
+                    
+                elif ('西武' in input_msg) or ('ライオンズ' in input_msg):
+                    input_msg = re.sub('西武', '', input_msg)
+                    input_msg = re.sub('ライオンズ', '', input_msg)
+                    obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAMES['ライオンズ'])
+                    content = obj['Body'].read().decode('utf-8')
+                    senshu_df = pd.read_csv(io.StringIO(content))
+                    
                 else:
                     for i, (k, v) in enumerate(FILE_NAMES.items()):
                         obj = s3.get_object(Bucket=BUCKET_NAME, Key=v)
                         content = obj['Body'].read().decode('utf-8')
                         if i == 0:
                             senshu_df = pd.read_csv(io.StringIO(content))
-
+                            
                         else:
                             tmp = pd.read_csv(io.StringIO(content))
                             senshu_df = pd.concat([senshu_df, tmp])
                             del tmp
-
+                            
                 input_msg = re.sub(' ', '', input_msg)
                 input_msg = re.sub('　', '', input_msg)
+                input_msg = re.sub('\u3000', '', input_msg)
+                print(f'search word: "{input_msg}"')
                 senshuname_list = list(senshu_df['名前'].str.replace('\u3000', ''))
                 ouenka_list = list(senshu_df['応援歌'])
-                ls_point = list(map(lambda x: ls.culc(input_msg, x) if set(input_msg) & set(x) else 100, senshuname_list))
+                ls_point = list(map(lambda x: (ls.culc(input_msg, x) if not input_msg in x else 0) if set(input_msg) & set(x) else 100, senshuname_list))
+                print(ls_point)
                 if not min(ls_point) == 100:
                     min_index = [i for i, v in enumerate(ls_point) if v == min(ls_point)]
                     msg = ''
                     for i, v in enumerate(min_index):
                         msg += f'【{senshuname_list[v]}】\n{ouenka_list[v]}\n'
+                    
+                    msg = msg[:-1]
                     
                 else:
                     msg = '当てはまる選手を見つけられませんでした。'
