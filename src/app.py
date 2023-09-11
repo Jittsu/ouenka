@@ -15,7 +15,11 @@ from linebot.models import TextSendMessage
 LINE_CHANNEL_ACCESS_TOKEN = os.environ['LINE_CHANNEL_ACCESS_TOKEN']
 LINE_BOT_API = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 BUCKET_NAME = os.environ['BUCKET_NAME']
-FILE_NAMES = {'ホークス': 'softbank_hawks.csv', 'タイガース': 'hanshin_tigers.csv'}
+FILE_NAMES = {
+    'ホークス': 'softbank_hawks.csv',
+    'タイガース': 'hanshin_tigers.csv',
+    'ライオンズ': 'seibu_lions.csv'
+}
 s3 = boto3.client('s3')
 
 class levenshtein:
