@@ -18,7 +18,9 @@ BUCKET_NAME = os.environ['BUCKET_NAME']
 FILE_NAMES = {
     'ホークス': 'softbank_hawks.csv',
     'タイガース': 'hanshin_tigers.csv',
-    'ライオンズ': 'seibu_lions.csv'
+    'ライオンズ': 'seibu_lions.csv',
+    'スワローズ': 'yakuruto_swallows.csv',
+    'ジャイアンツ': 'yomiuri_giants.csv'
 }
 s3 = boto3.client('s3')
 
@@ -73,6 +75,21 @@ def lambda_handler(event, context):
                     input_msg = re.sub('西武', '', input_msg)
                     input_msg = re.sub('ライオンズ', '', input_msg)
                     obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAMES['ライオンズ'])
+                    content = obj['Body'].read().decode('utf-8')
+                    senshu_df = pd.read_csv(io.StringIO(content))
+
+                elif ('ヤクルト' in input_msg) or ('スワローズ' in input_msg):
+                    input_msg = re.sub('ヤクルト', '', input_msg)
+                    input_msg = re.sub('スワローズ', '', input_msg)
+                    obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAMES['スワローズ'])
+                    content = obj['Body'].read().decode('utf-8')
+                    senshu_df = pd.read_csv(io.StringIO(content))
+
+                elif ('読売' in input_msg) or ('ジャイアンツ' in input_msg) or ('巨人' in input_msg):
+                    input_msg = re.sub('読売', '', input_msg)
+                    input_msg = re.sub('ジャイアンツ', '', input_msg)
+                    input_msg = re.sub('巨人', '', input_msg)
+                    obj = s3.get_object(Bucket=BUCKET_NAME, Key=FILE_NAMES['ジャイアンツ'])
                     content = obj['Body'].read().decode('utf-8')
                     senshu_df = pd.read_csv(io.StringIO(content))
                     
